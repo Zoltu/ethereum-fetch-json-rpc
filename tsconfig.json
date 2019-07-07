@@ -1,0 +1,23 @@
+{
+	"compilerOptions": {
+		"target": "esnext",
+		"module": "none",
+		"moduleResolution": "node",
+		"rootDir": "source",
+		"strict": true,
+		"sourceMap": true,
+		"inlineSources": true,
+		"noEmit": true,
+		"noEmitOnError": true,
+		"noImplicitAny": true,
+		"noImplicitThis": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"esModuleInterop": true,
+		"lib": [ "esnext" ],
+	},
+	"include": [
+		"source/**/*.ts",
+	],
+}

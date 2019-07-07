@@ -1,0 +1,5 @@
+/node_modules/
+/output-es/
+/output-node/
+/source/vendor/**
+!/source/vendor/.gitkeep
