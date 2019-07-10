@@ -1,7 +1,7 @@
 import { Bytes, Bytes32, Address, TransactionReceipt, IUnsignedTransaction, IOffChainTransaction, Rpc, IJsonRpcRequest, IJsonRpcError, IJsonRpcSuccess, isJsonRpcError, validateJsonRpcResponse, JsonRpcMethod, IOnChainTransaction, ISignedTransaction, offChainToUnsignedTransaction, unsignedToSignedTransaction, BytesLike, AddressLike, Bytes1Like, Bytes32Like, JsonRpc } from '@zoltu/ethereum-types'
 import { rlpEncode } from './vendor/rlp-encoder/index'
-import { ErrorWithData } from './error-with-data';
-export { ErrorWithData } from './error-with-data'
+import { ErrorWithData } from './error-with-data'
+export { ErrorWithData }
 import { sleep } from './sleep'
 import { stripLeadingZeros } from './utils'
 
