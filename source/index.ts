@@ -101,12 +101,13 @@ export class FetchJsonRpc implements JsonRpc {
 	}
 
 	private readonly makeRequest = <
-		TRequestConstructor extends new (id: string | number | null, ...args: any[]) => { wireEncode: () => IJsonRpcRequest<JsonRpcMethod, any[]> },
+		// https://github.com/microsoft/TypeScript/issues/32976 TRequestConstructor should be constrained to constructors that take a string|number|null first parameter
+		TRequestConstructor extends new (...args: any[]) => { wireEncode: () => IJsonRpcRequest<JsonRpcMethod, any[]> },
 		TResponseConstructor extends new (rawResponse: IJsonRpcSuccess<any>) => { result: any },
 		TRequest extends InstanceType<TRequestConstructor>,
 		TResponse extends InstanceType<TResponseConstructor>,
 		TResponseResult extends ResultType<TResponse>,
-	> (Request: TRequestConstructor, Response: TResponseConstructor) => async (...args: DropFirst<ConstructorParameters<TRequestConstructor>>): Promise<TResponseResult> => {
+	>(Request: TRequestConstructor, Response: TResponseConstructor) => async (...args: DropFirst<ConstructorParameters<TRequestConstructor>>): Promise<TResponseResult> => {
 		const request = new Request(null, ...args) as TRequest
 		const rawRequest = request.wireEncode() as RawRequestType<TRequest>
 		const rawResponse = await this.remoteProcedureCall(rawRequest) as PickFirst<ConstructorParameters<TResponseConstructor>>

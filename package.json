@@ -1,7 +1,7 @@
 {
 	"name": "@zoltu/ethereum-fetch-json-rpc",
 	"description": "A strongly typed Ethereum library that facilitates talking to an Ethereum JSON-RPC node via the whatwg Fetch API.",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"repository": {},
 	"license": "Unlicense",
 	"main": "output-node/index.js",
@@ -16,7 +16,7 @@
 		"recursive-fs": "1.1.2",
 		"ts-node": "8.3.0",
 		"ttypescript": "1.5.7",
-		"typescript": "3.5.2"
+		"typescript": "3.5.3"
 	},
 	"dependencies": {
 		"@zoltu/ethereum-types": "1.0.0"
