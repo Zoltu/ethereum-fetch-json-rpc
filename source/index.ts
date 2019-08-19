@@ -103,16 +103,13 @@ export class FetchJsonRpc implements JsonRpc {
 	private readonly makeRequest = <
 		TRequestConstructor extends new (id: string | number | null, ...args: any[]) => { wireEncode: () => IJsonRpcRequest<JsonRpcMethod, any[]> },
 		TResponseConstructor extends new (rawResponse: IJsonRpcSuccess<any>) => { result: any },
-		TArguments extends DropFirst<ConstructorParameters<TRequestConstructor>>,
 		TRequest extends InstanceType<TRequestConstructor>,
-		TRawRequest extends RawRequestType<TRequest>,
-		TRawResponse extends PickFirst<ConstructorParameters<TResponseConstructor>>,
 		TResponse extends InstanceType<TResponseConstructor>,
 		TResponseResult extends ResultType<TResponse>,
-	> (Request: TRequestConstructor, Response: TResponseConstructor) => async (...args: TArguments): Promise<TResponseResult> => {
+	> (Request: TRequestConstructor, Response: TResponseConstructor) => async (...args: DropFirst<ConstructorParameters<TRequestConstructor>>): Promise<TResponseResult> => {
 		const request = new Request(null, ...args) as TRequest
-		const rawRequest = request.wireEncode() as TRawRequest
-		const rawResponse = await this.remoteProcedureCall(rawRequest) as TRawResponse
+		const rawRequest = request.wireEncode() as RawRequestType<TRequest>
+		const rawResponse = await this.remoteProcedureCall(rawRequest) as PickFirst<ConstructorParameters<TResponseConstructor>>
 		const response = new Response(rawResponse) as TResponse
 		return response.result as TResponseResult
 	}
