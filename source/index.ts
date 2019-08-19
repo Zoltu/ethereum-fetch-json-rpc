@@ -145,8 +145,6 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly sendRawTransaction = this.makeRequest(Rpc.Eth.SendRawTransaction.Request, Rpc.Eth.SendRawTransaction.Response)
 	public readonly sendTransaction = this.makeRequest(Rpc.Eth.SendTransaction.Request, Rpc.Eth.SendTransaction.Response)
 	public readonly sign = this.makeRequest(Rpc.Eth.Sign.Request, Rpc.Eth.Sign.Response)
-	public readonly signTransaction = this.makeRequest(Rpc.Eth.SignTransaction.Request, Rpc.Eth.SignTransaction.Response)
-	public readonly signTypedData = this.makeRequest(Rpc.Eth.SignTypedData.Request, Rpc.Eth.SignTypedData.Response)
 	public readonly syncing = this.makeRequest(Rpc.Eth.Syncing.Request, Rpc.Eth.Syncing.Response)
 
 	public readonly remoteProcedureCall = async <
