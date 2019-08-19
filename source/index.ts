@@ -47,7 +47,7 @@ export class FetchJsonRpc implements JsonRpc {
 
 	public readonly onChainContractCall = async (transaction: Partial<IOnChainTransaction<AddressLike, BytesLike>> & { to: AddressLike, data: BytesLike }): Promise<TransactionReceipt> => this.executeTransaction(transaction)
 
-	public readonly offChainContractCall = async (transaction: Partial<IOffChainTransaction<AddressLike, BytesLike>> & { to: AddressLike }): Promise<Bytes> => {
+	public readonly offChainContractCall = async (transaction: Partial<IOffChainTransaction<AddressLike, BytesLike>> & { to: AddressLike, data: BytesLike }): Promise<Bytes> => {
 		const offChainTransaction: IOffChainTransaction<AddressLike, BytesLike> = {
 			from: transaction.from || await this.coinbase(),
 			to: transaction.to,
