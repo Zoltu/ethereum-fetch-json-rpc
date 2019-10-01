@@ -174,7 +174,7 @@ export class FetchJsonRpc implements JsonRpc {
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 		} else {
-			toEncode.push(stripLeadingZeros(Bytes.fromHexString((Number.parseInt(transaction.v.toString(), 16) + transaction.chainId * 2 + 8).toString(16))))
+			toEncode.push(stripLeadingZeros(transaction.v))
 			toEncode.push(stripLeadingZeros(transaction.r))
 			toEncode.push(stripLeadingZeros(transaction.s))
 		}
