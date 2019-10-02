@@ -71,7 +71,7 @@ export class FetchJsonRpc implements JsonRpc {
 		const unsignedTransaction = offChainToUnsignedTransaction(
 			gasEstimatingTransaction,
 			transaction.gasLimit || await this.estimateGas(gasEstimatingTransaction),
-			transaction.nonce || await this.getTransactionCount(gasEstimatingTransaction.from),
+			transaction.nonce || await this.getTransactionCount(gasEstimatingTransaction.from, 'pending'),
 			await this.chainId,
 		)
 		let transactionHash: Bytes32
@@ -136,7 +136,16 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly getTransactionByBlockNumberAndIndex = this.makeRequest(Rpc.Eth.GetTransactionByBlockNumberAndIndex.Request, Rpc.Eth.GetTransactionByBlockNumberAndIndex.Response)
 	public readonly getTransactionByHash = this.makeRequest(Rpc.Eth.GetTransactionByHash.Request, Rpc.Eth.GetTransactionByHash.Response)
 	public readonly getTransactionCount = this.makeRequest(Rpc.Eth.GetTransactionCount.Request, Rpc.Eth.GetTransactionCount.Response)
-	public readonly getTransactionReceipt = this.makeRequest(Rpc.Eth.GetTransactionReceipt.Request, Rpc.Eth.GetTransactionReceipt.Response)
+	// workaround for Parity returning partial transaction receipts before mining
+	// public readonly getTransactionReceipt = this.makeRequest(Rpc.Eth.GetTransactionReceipt.Request, Rpc.Eth.GetTransactionReceipt.Response)
+	public readonly getTransactionReceipt = async (transactionHash: ArrayLike<number> & {length:32}): Promise<TransactionReceipt | null> => {
+		const request = new Rpc.Eth.GetTransactionReceipt.Request(null, transactionHash)
+		const rawRequest = request.wireEncode()
+		const rawResponse = await this.remoteProcedureCall(rawRequest)
+		if (rawResponse.result === null || rawResponse.result.blockNumber === null || rawResponse.result.blockHash === null) return null
+		const response = new Rpc.Eth.GetTransactionReceipt.Response(rawResponse)
+		return response.result
+	}
 	public readonly getUncleByBlockHashAndIndex = this.makeRequest(Rpc.Eth.GetUncleByBlockHashAndIndex.Request, Rpc.Eth.GetUncleByBlockHashAndIndex.Response)
 	public readonly getUncleByBlockNumberAndIndex = this.makeRequest(Rpc.Eth.GetUncleByBlockNumberAndIndex.Request, Rpc.Eth.GetUncleByBlockNumberAndIndex.Response)
 	public readonly getUncleCountByBlockHash = this.makeRequest(Rpc.Eth.GetUncleCountByBlockHash.Request, Rpc.Eth.GetUncleCountByBlockHash.Response)
