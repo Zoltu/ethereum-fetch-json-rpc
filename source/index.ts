@@ -1,4 +1,4 @@
-import { Bytes, Bytes32, Address, TransactionReceipt, IUnsignedTransaction, IOffChainTransaction, Rpc, IJsonRpcRequest, IJsonRpcError, IJsonRpcSuccess, isJsonRpcError, validateJsonRpcResponse, JsonRpcMethod, IOnChainTransaction, ISignedTransaction, offChainToUnsignedTransaction, unsignedToSignedTransaction, BytesLike, AddressLike, Bytes1Like, Bytes32Like, JsonRpc } from '@zoltu/ethereum-types'
+import { Bytes, Bytes32, Address, TransactionReceipt, IUnsignedTransaction, IOffChainTransaction, Rpc, IJsonRpcRequest, IJsonRpcError, IJsonRpcSuccess, isJsonRpcError, validateJsonRpcResponse, JsonRpcMethod, IOnChainTransaction, ISignedTransaction, BytesLike, AddressLike, JsonRpc } from '@zoltu/ethereum-types'
 import { rlpEncode } from './vendor/rlp-encoder/index'
 import { ErrorWithData } from './error-with-data'
 export { ErrorWithData }
@@ -19,9 +19,9 @@ type FetchOptions = {
 }
 type Fetch = (url: string, options: FetchOptions) => Promise<FetchResult>
 type SignatureLike = {
-	r: Bytes32Like,
-	s: Bytes32Like,
-	v: Bytes1Like,
+	r: bigint,
+	s: bigint,
+	v: bigint,
 }
 
 export class FetchJsonRpc implements JsonRpc {
@@ -68,24 +68,19 @@ export class FetchJsonRpc implements JsonRpc {
 			gasLimit: transaction.gasLimit || 1_000_000_000,
 			gasPrice: transaction.gasPrice || await this.getGasPrice(),
 		}
-		const unsignedTransaction = offChainToUnsignedTransaction(
-			gasEstimatingTransaction,
-			transaction.gasLimit || await this.estimateGas(gasEstimatingTransaction),
-			transaction.nonce || await this.getTransactionCount(gasEstimatingTransaction.from, 'pending'),
-			await this.chainId,
-		)
+		const unsignedTransaction = {
+			...gasEstimatingTransaction,
+			gasLimit: transaction.gasLimit || await this.estimateGas(gasEstimatingTransaction),
+			nonce: transaction.nonce || await this.getTransactionCount(gasEstimatingTransaction.from, 'pending'),
+			chainId: await this.chainId,
+		}
 		let transactionHash: Bytes32
 		if (this.signer === undefined) {
 			transactionHash = await this.sendTransaction(unsignedTransaction)
 		} else {
 			const rlpEncodedUnsignedTransaction = this.rlpEncodeTransaction(unsignedTransaction)
 			const signature = await this.signer(rlpEncodedUnsignedTransaction)
-			const signedTransaction = unsignedToSignedTransaction(
-				unsignedTransaction,
-				signature.v,
-				signature.r,
-				signature.s,
-			)
+			const signedTransaction = {...unsignedTransaction, ...signature }
 			const rlpEncodedSignedTransaction = this.rlpEncodeTransaction(signedTransaction)
 			transactionHash = await this.sendRawTransaction(rlpEncodedSignedTransaction)
 		}
@@ -169,7 +164,7 @@ export class FetchJsonRpc implements JsonRpc {
 		return responseBody
 	}
 
-	private readonly rlpEncodeTransaction = (transaction: IUnsignedTransaction<AddressLike, BytesLike> | ISignedTransaction<AddressLike, BytesLike, Bytes32Like, Bytes1Like>): Bytes => {
+	private readonly rlpEncodeTransaction = (transaction: IUnsignedTransaction<AddressLike, BytesLike> | ISignedTransaction<AddressLike, BytesLike>): Bytes => {
 		const toEncode = [
 			stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.nonce)),
 			stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.gasPrice)),
@@ -183,14 +178,14 @@ export class FetchJsonRpc implements JsonRpc {
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 		} else {
-			toEncode.push(stripLeadingZeros(transaction.v))
-			toEncode.push(stripLeadingZeros(transaction.r))
-			toEncode.push(stripLeadingZeros(transaction.s))
+			toEncode.push(Bytes32.fromUnsignedInteger(transaction.v))
+			toEncode.push(Bytes32.fromUnsignedInteger(transaction.r))
+			toEncode.push(Bytes32.fromUnsignedInteger(transaction.s))
 		}
 		return Bytes.fromByteArray(rlpEncode(toEncode))
 	}
 
-	private readonly isSignedTransaction = (transaction: IUnsignedTransaction<AddressLike, BytesLike> | ISignedTransaction<AddressLike, BytesLike, Bytes32Like, Bytes1Like>): transaction is ISignedTransaction<AddressLike, BytesLike, Bytes32Like, Bytes1Like> => (transaction as any).r !== undefined
+	private readonly isSignedTransaction = (transaction: IUnsignedTransaction<AddressLike, BytesLike> | ISignedTransaction<AddressLike, BytesLike>): transaction is ISignedTransaction<AddressLike, BytesLike> => (transaction as any).r !== undefined
 }
 
 type DropFirst<T extends any[]> = ((...t: T) => void) extends ((x: any, ...u: infer U) => void) ? U : never
