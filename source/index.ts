@@ -178,9 +178,9 @@ export class FetchJsonRpc implements JsonRpc {
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 		} else {
-			toEncode.push(Bytes32.fromUnsignedInteger(transaction.v))
-			toEncode.push(Bytes32.fromUnsignedInteger(transaction.r))
-			toEncode.push(Bytes32.fromUnsignedInteger(transaction.s))
+			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.v)))
+			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.r)))
+			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.s)))
 		}
 		return Bytes.fromByteArray(rlpEncode(toEncode))
 	}
