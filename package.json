@@ -1,7 +1,7 @@
 {
 	"name": "@zoltu/ethereum-fetch-json-rpc",
 	"description": "A strongly typed Ethereum library that facilitates talking to an Ethereum JSON-RPC node via the whatwg Fetch API.",
-	"version": "4.0.2",
+	"version": "5.0.0",
 	"repository": {
 		"url": "https://github.com/Zoltu/ethereum-fetch-json-rpc"
 	},
@@ -9,19 +9,19 @@
 	"main": "output-node/index.js",
 	"module": "output-es/index.js",
 	"devDependencies": {
-		"@types/chai": "4.1.7",
-		"@zoltu/file-copier": "1.0.0",
-		"@zoltu/rlp-encoder": "1.0.1",
-		"@zoltu/typescript-transformer-append-js-extension": "1.0.0",
+		"@types/chai": "4.2.3",
+		"@zoltu/file-copier": "2.2.1",
+		"@zoltu/rlp-encoder": "1.0.2",
+		"@zoltu/typescript-transformer-append-js-extension": "1.0.1",
 		"chai": "4.2.0",
 		"chai-bytes": "0.1.2",
 		"recursive-fs": "1.1.2",
-		"ts-node": "8.3.0",
+		"ts-node": "8.4.1",
 		"ttypescript": "1.5.7",
-		"typescript": "3.5.3"
+		"typescript": "3.6.4"
 	},
 	"dependencies": {
-		"@zoltu/ethereum-types": "4.0.0"
+		"@zoltu/ethereum-types": "7.0.0"
 	},
 	"scripts": {
 		"copy-dependencies": "recursive-copy \"node_modules/@zoltu/rlp-encoder/source\" \"source/vendor/rlp-encoder\"",

@@ -1,6 +1,4 @@
-import { BytesLike } from '@zoltu/ethereum-types'
-
-export function stripLeadingZeros(byteArray: BytesLike): Uint8Array {
+export function stripLeadingZeros(byteArray: Uint8Array): Uint8Array {
 	let i = 0
 	for (; i < byteArray.length; ++i) {
 		if (byteArray[i] !== 0) break

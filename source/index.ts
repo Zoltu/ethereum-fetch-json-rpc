@@ -1,4 +1,4 @@
-import { Bytes, Bytes32, Address, TransactionReceipt, IUnsignedTransaction, IOffChainTransaction, Rpc, IJsonRpcRequest, IJsonRpcError, IJsonRpcSuccess, isJsonRpcError, validateJsonRpcResponse, JsonRpcMethod, IOnChainTransaction, ISignedTransaction, BytesLike, AddressLike, JsonRpc } from '@zoltu/ethereum-types'
+import { Bytes, TransactionReceipt, IUnsignedTransaction, IOffChainTransaction, Rpc, IJsonRpcRequest, IJsonRpcError, IJsonRpcSuccess, isJsonRpcError, validateJsonRpcResponse, JsonRpcMethod, IOnChainTransaction, ISignedTransaction, JsonRpc } from '@zoltu/ethereum-types'
 import { rlpEncode } from './vendor/rlp-encoder/index'
 import { ErrorWithData } from './error-with-data'
 export { ErrorWithData }
@@ -27,28 +27,28 @@ type SignatureLike = {
 export class FetchJsonRpc implements JsonRpc {
 	private readonly chainId: Promise<number>
 	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>)
-	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>, getSignerAddress?: () => Promise<AddressLike>, signer?: (bytes: Bytes) => Promise<SignatureLike>, chainId?: number)
+	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>, getSignerAddress?: () => Promise<bigint>, signer?: (bytes: Bytes) => Promise<SignatureLike>, chainId?: number)
 	public constructor(
 		private readonly jsonRpcEndpoint: string,
 		private readonly fetch: Fetch,
 		getGasPriceInAttoeth?: () => Promise<bigint>,
-		getSignerAddress?: () => Promise<AddressLike>,
+		getSignerAddress?: () => Promise<bigint>,
 		private readonly signer?: (bytes: Bytes) => Promise<SignatureLike>,
 		chainId?: number
 	) {
-		this.coinbase = (getSignerAddress) ? async () => Address.fromByteArray(await getSignerAddress()) : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
+		this.coinbase = (getSignerAddress) ? getSignerAddress : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
 		this.getGasPrice = (getGasPriceInAttoeth) ? getGasPriceInAttoeth : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
 		this.chainId = (chainId !== undefined) ? Promise.resolve(chainId) : this.getChainId()
 	}
 
-	public readonly sendEth = async (destination: AddressLike, amount: bigint): Promise<TransactionReceipt> => await this.executeTransaction({ to: destination, value: amount })
+	public readonly sendEth = async (destination: bigint, amount: bigint): Promise<TransactionReceipt> => await this.executeTransaction({ to: destination, value: amount })
 
-	public readonly deployContract = async (bytecode: BytesLike, value?: bigint): Promise<Address> => (await this.executeTransaction({ to: null, data: bytecode, value: value })).contractAddress!
+	public readonly deployContract = async (bytecode: Uint8Array, value?: bigint): Promise<bigint> => (await this.executeTransaction({ to: null, data: bytecode, value: value })).contractAddress!
 
-	public readonly onChainContractCall = async (transaction: Partial<IOnChainTransaction<AddressLike, BytesLike>> & { to: AddressLike, data: BytesLike }): Promise<TransactionReceipt> => this.executeTransaction(transaction)
+	public readonly onChainContractCall = async (transaction: PartiallyRequired<IOnChainTransaction, 'to'|'data'>): Promise<TransactionReceipt> => this.executeTransaction(transaction)
 
-	public readonly offChainContractCall = async (transaction: Partial<IOffChainTransaction<AddressLike, BytesLike>> & { to: AddressLike, data: BytesLike }): Promise<Bytes> => {
-		const offChainTransaction: IOffChainTransaction<AddressLike, BytesLike> = {
+	public readonly offChainContractCall = async (transaction: PartiallyRequired<IOffChainTransaction, 'to'|'data'>): Promise<Bytes> => {
+		const offChainTransaction: IOffChainTransaction = {
 			from: transaction.from || await this.coinbase(),
 			to: transaction.to,
 			value: transaction.value || 0n,
@@ -59,8 +59,8 @@ export class FetchJsonRpc implements JsonRpc {
 		return await this.call(offChainTransaction)
 	}
 
-	private readonly executeTransaction = async (transaction: Partial<IUnsignedTransaction<AddressLike, BytesLike>> & { to: AddressLike | null }): Promise<TransactionReceipt> => {
-		const gasEstimatingTransaction: IOffChainTransaction<AddressLike, BytesLike> = {
+	private readonly executeTransaction = async (transaction: Partial<IUnsignedTransaction> & { to: bigint | null }): Promise<TransactionReceipt> => {
+		const gasEstimatingTransaction: IOffChainTransaction = {
 			from: transaction.from || await this.coinbase(),
 			to: transaction.to,
 			value: transaction.value || 0n,
@@ -74,7 +74,7 @@ export class FetchJsonRpc implements JsonRpc {
 			nonce: transaction.nonce || await this.getTransactionCount(gasEstimatingTransaction.from, 'pending'),
 			chainId: await this.chainId,
 		}
-		let transactionHash: Bytes32
+		let transactionHash: bigint
 		if (this.signer === undefined) {
 			transactionHash = await this.sendTransaction(unsignedTransaction)
 		} else {
@@ -112,7 +112,7 @@ export class FetchJsonRpc implements JsonRpc {
 
 	public readonly call = this.makeRequest(Rpc.Eth.Call.Request, Rpc.Eth.Call.Response)
 	// see constructor
-	public readonly coinbase: () => Promise<Address>
+	public readonly coinbase: () => Promise<bigint>
 	public readonly estimateGas = this.makeRequest(Rpc.Eth.EstimateGas.Request, Rpc.Eth.EstimateGas.Response)
 	public readonly getAccounts = this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
 	public readonly getBalance = this.makeRequest(Rpc.Eth.GetBalance.Request, Rpc.Eth.GetBalance.Response)
@@ -133,7 +133,7 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly getTransactionCount = this.makeRequest(Rpc.Eth.GetTransactionCount.Request, Rpc.Eth.GetTransactionCount.Response)
 	// workaround for Parity returning partial transaction receipts before mining
 	// public readonly getTransactionReceipt = this.makeRequest(Rpc.Eth.GetTransactionReceipt.Request, Rpc.Eth.GetTransactionReceipt.Response)
-	public readonly getTransactionReceipt = async (transactionHash: ArrayLike<number> & {length:32}): Promise<TransactionReceipt | null> => {
+	public readonly getTransactionReceipt = async (transactionHash: bigint): Promise<TransactionReceipt | null> => {
 		const request = new Rpc.Eth.GetTransactionReceipt.Request(null, transactionHash)
 		const rawRequest = request.wireEncode()
 		const rawResponse = await this.remoteProcedureCall(rawRequest)
@@ -164,31 +164,32 @@ export class FetchJsonRpc implements JsonRpc {
 		return responseBody
 	}
 
-	private readonly rlpEncodeTransaction = (transaction: IUnsignedTransaction<AddressLike, BytesLike> | ISignedTransaction<AddressLike, BytesLike>): Bytes => {
+	private readonly rlpEncodeTransaction = (transaction: IUnsignedTransaction | ISignedTransaction): Bytes => {
 		const toEncode = [
-			stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.nonce)),
-			stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.gasPrice)),
-			stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.gasLimit)),
-			stripLeadingZeros(transaction.to || new Uint8Array(0)),
-			stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.value)),
+			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.nonce, 256)),
+			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.gasPrice, 256)),
+			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.gasLimit, 256)),
+			stripLeadingZeros(transaction.to !== null ? Bytes.fromUnsignedInteger(transaction.to, 256) : new Uint8Array(0)),
+			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.value, 256)),
 			new Uint8Array(transaction.data),
 		]
 		if (!this.isSignedTransaction(transaction)) {
-			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.chainId)))
+			toEncode.push(stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.chainId, 256)))
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 			toEncode.push(stripLeadingZeros(new Uint8Array(0)))
 		} else {
-			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.v)))
-			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.r)))
-			toEncode.push(stripLeadingZeros(Bytes32.fromUnsignedInteger(transaction.s)))
+			toEncode.push(stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.v, 256)))
+			toEncode.push(stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.r, 256)))
+			toEncode.push(stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.s, 256)))
 		}
 		return Bytes.fromByteArray(rlpEncode(toEncode))
 	}
 
-	private readonly isSignedTransaction = (transaction: IUnsignedTransaction<AddressLike, BytesLike> | ISignedTransaction<AddressLike, BytesLike>): transaction is ISignedTransaction<AddressLike, BytesLike> => (transaction as any).r !== undefined
+	private readonly isSignedTransaction = (transaction: IUnsignedTransaction | ISignedTransaction): transaction is ISignedTransaction => (transaction as any).r !== undefined
 }
 
 type DropFirst<T extends any[]> = ((...t: T) => void) extends ((x: any, ...u: infer U) => void) ? U : never
 type PickFirst<T extends any[]> = ((...t: T) => void) extends ((x: infer U, ...u: any[]) => void) ? U : never
 type ResultType<T extends { result: unknown }> = T extends { result: infer R } ? R : never
 type RawRequestType<T extends { wireEncode: () => IJsonRpcRequest<JsonRpcMethod, unknown[]> }> = T extends { wireEncode: () => infer R } ? R : never
+type PartiallyRequired<T, K extends keyof T> = { [Key in Exclude<keyof T, K>]?: T[Key] } & { [Key in K]-?: T[Key] }
