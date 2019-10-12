@@ -25,16 +25,16 @@ type SignatureLike = {
 }
 
 export class FetchJsonRpc implements JsonRpc {
-	private readonly chainId: Promise<number>
+	private readonly chainId: Promise<bigint>
 	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>)
-	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>, getSignerAddress?: () => Promise<bigint>, signer?: (bytes: Bytes) => Promise<SignatureLike>, chainId?: number)
+	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>, getSignerAddress?: () => Promise<bigint>, signer?: (bytes: Bytes) => Promise<SignatureLike>, chainId?: bigint)
 	public constructor(
 		private readonly jsonRpcEndpoint: string,
 		private readonly fetch: Fetch,
 		getGasPriceInAttoeth?: () => Promise<bigint>,
 		getSignerAddress?: () => Promise<bigint>,
 		private readonly signer?: (bytes: Bytes) => Promise<SignatureLike>,
-		chainId?: number
+		chainId?: bigint
 	) {
 		this.coinbase = (getSignerAddress) ? getSignerAddress : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
 		this.getGasPrice = (getGasPriceInAttoeth) ? getGasPriceInAttoeth : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
@@ -53,7 +53,7 @@ export class FetchJsonRpc implements JsonRpc {
 			to: transaction.to,
 			value: transaction.value || 0n,
 			data: transaction.data || new Bytes(),
-			gasLimit: transaction.gasLimit || 1_000_000_000,
+			gasLimit: transaction.gasLimit || 1_000_000_000n,
 			gasPrice: transaction.gasPrice || await this.getGasPrice(),
 		}
 		return await this.call(offChainTransaction)
@@ -65,7 +65,7 @@ export class FetchJsonRpc implements JsonRpc {
 			to: transaction.to,
 			value: transaction.value || 0n,
 			data: transaction.data || new Bytes(),
-			gasLimit: transaction.gasLimit || 1_000_000_000,
+			gasLimit: transaction.gasLimit || 1_000_000_000n,
 			gasPrice: transaction.gasPrice || await this.getGasPrice(),
 		}
 		const unsignedTransaction = {
