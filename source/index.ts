@@ -21,7 +21,7 @@ type Fetch = (url: string, options: FetchOptions) => Promise<FetchResult>
 type SignatureLike = {
 	r: bigint,
 	s: bigint,
-	v: bigint,
+	yParity: 'even' | 'odd',
 }
 
 export class FetchJsonRpc implements JsonRpc {
@@ -80,7 +80,8 @@ export class FetchJsonRpc implements JsonRpc {
 		} else {
 			const rlpEncodedUnsignedTransaction = this.rlpEncodeTransaction(unsignedTransaction)
 			const signature = await this.signer(rlpEncodedUnsignedTransaction)
-			const signedTransaction = {...unsignedTransaction, ...signature }
+			const v = (signature.yParity === 'even' ? 0n : 1n) + 35n + 2n * unsignedTransaction.chainId
+			const signedTransaction = {...unsignedTransaction, r: signature.r, s: signature.s, v }
 			const rlpEncodedSignedTransaction = this.rlpEncodeTransaction(signedTransaction)
 			transactionHash = await this.sendRawTransaction(rlpEncodedSignedTransaction)
 		}
