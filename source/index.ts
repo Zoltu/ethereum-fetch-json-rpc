@@ -37,6 +37,7 @@ export class FetchJsonRpc implements JsonRpc {
 		chainId?: bigint
 	) {
 		this.coinbase = (getSignerAddress) ? getSignerAddress : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
+		this.getAccounts = (getSignerAddress) ? async () => [await getSignerAddress()] : this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
 		this.getGasPrice = (getGasPriceInAttoeth) ? getGasPriceInAttoeth : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
 		this.chainId = (chainId !== undefined) ? Promise.resolve(chainId) : this.getChainId()
 	}
@@ -49,7 +50,7 @@ export class FetchJsonRpc implements JsonRpc {
 
 	public readonly offChainContractCall = async (transaction: PartiallyRequired<IOffChainTransaction, 'to'|'data'>): Promise<Bytes> => {
 		const offChainTransaction: IOffChainTransaction = {
-			from: transaction.from || await this.coinbase(),
+			from: transaction.from || await this.coinbase() || 0n,
 			to: transaction.to,
 			value: transaction.value || 0n,
 			data: transaction.data || new Bytes(),
@@ -60,8 +61,21 @@ export class FetchJsonRpc implements JsonRpc {
 	}
 
 	private readonly executeTransaction = async (transaction: Partial<IUnsignedTransaction> & { to: bigint | null }): Promise<TransactionReceipt> => {
+		const transactionHash = await this.submitTransaction(transaction)
+		let receipt = await this.getTransactionReceipt(transactionHash)
+		// TODO: find out if Parity, Geth or MM return a receipt with a null block anymore (docs suggest no)
+		while (receipt === null || receipt.blockNumber === null) {
+			await sleep(1000)
+			receipt = await this.getTransactionReceipt(transactionHash)
+		}
+		if (!receipt.status) throw new Error(`Transaction mined, but failed.`)
+		if (!receipt.contractAddress && !transaction.to) throw new Error(`Contract deployment failed.  Contract address was null.`)
+		return receipt
+	}
+
+	private readonly submitTransaction = async (transaction: Partial<IUnsignedTransaction> & { to: bigint | null }): Promise<bigint> => {
 		const gasEstimatingTransaction: IOffChainTransaction = {
-			from: transaction.from || await this.coinbase(),
+			from: transaction.from || await this.coinbase() || 0n,
 			to: transaction.to,
 			value: transaction.value || 0n,
 			data: transaction.data || new Bytes(),
@@ -76,7 +90,7 @@ export class FetchJsonRpc implements JsonRpc {
 		}
 		let transactionHash: bigint
 		if (this.signer === undefined) {
-			transactionHash = await this.sendTransaction(unsignedTransaction)
+			transactionHash = await this.makeRequest(Rpc.Eth.SendTransaction.Request, Rpc.Eth.SendTransaction.Response)(unsignedTransaction)
 		} else {
 			const rlpEncodedUnsignedTransaction = this.rlpEncodeTransaction(unsignedTransaction)
 			const signature = await this.signer(rlpEncodedUnsignedTransaction)
@@ -85,15 +99,7 @@ export class FetchJsonRpc implements JsonRpc {
 			const rlpEncodedSignedTransaction = this.rlpEncodeTransaction(signedTransaction)
 			transactionHash = await this.sendRawTransaction(rlpEncodedSignedTransaction)
 		}
-		let receipt = await this.getTransactionReceipt(transactionHash)
-		// TODO: find out if Parity, Geth or MM return a receipt with a null block anymore (docs suggest no)
-		while (receipt === null || receipt.blockNumber === null) {
-			await sleep(1000)
-			receipt = await this.getTransactionReceipt(transactionHash)
-		}
-		if (!receipt.status) throw new Error(`Transaction mined, but failed.`)
-		if (!receipt.contractAddress && !unsignedTransaction.to) throw new Error(`Contract deployment failed.  Contract address was null.`)
-		return receipt
+		return transactionHash
 	}
 
 	private readonly makeRequest = <
@@ -113,9 +119,10 @@ export class FetchJsonRpc implements JsonRpc {
 
 	public readonly call = this.makeRequest(Rpc.Eth.Call.Request, Rpc.Eth.Call.Response)
 	// see constructor
-	public readonly coinbase: () => Promise<bigint>
+	public readonly coinbase: () => Promise<bigint|null>
 	public readonly estimateGas = this.makeRequest(Rpc.Eth.EstimateGas.Request, Rpc.Eth.EstimateGas.Response)
-	public readonly getAccounts = this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
+	// see constructor
+	public readonly getAccounts: () => Promise<Array<bigint>>
 	public readonly getBalance = this.makeRequest(Rpc.Eth.GetBalance.Request, Rpc.Eth.GetBalance.Response)
 	public readonly getBlockByHash = this.makeRequest(Rpc.Eth.GetBlockByHash.Request, Rpc.Eth.GetBlockByHash.Response)
 	public readonly getBlockByNumber = this.makeRequest(Rpc.Eth.GetBlockByNumber.Request, Rpc.Eth.GetBlockByNumber.Response)
@@ -148,8 +155,14 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly getUncleCountByBlockNumber = this.makeRequest(Rpc.Eth.GetUncleCountByBlockNumber.Request, Rpc.Eth.GetUncleCountByBlockNumber.Response)
 	public readonly getProtocolVersion = this.makeRequest(Rpc.Eth.ProtocolVersion.Request, Rpc.Eth.ProtocolVersion.Response)
 	public readonly sendRawTransaction = this.makeRequest(Rpc.Eth.SendRawTransaction.Request, Rpc.Eth.SendRawTransaction.Response)
-	public readonly sendTransaction = this.makeRequest(Rpc.Eth.SendTransaction.Request, Rpc.Eth.SendTransaction.Response)
-	public readonly sign = this.makeRequest(Rpc.Eth.Sign.Request, Rpc.Eth.Sign.Response)
+	public readonly sendTransaction = this.submitTransaction
+	public readonly sign = async (signerAddress: bigint, data: Uint8Array) => {
+		if (this.signer === undefined) return this.makeRequest(Rpc.Eth.Sign.Request, Rpc.Eth.Sign.Response)(signerAddress, data)
+		if (await this.coinbase() !== signerAddress) throw new Error(`Cannot sign messages for address 0x${signerAddress.toString(16).padStart(40, '0')}`)
+		const messageToSign = this.mutateMessageForSigning(data)
+		const signature = await this.signer(messageToSign)
+		return this.encodeSignature(signature)
+	}
 	public readonly syncing = this.makeRequest(Rpc.Eth.Syncing.Request, Rpc.Eth.Syncing.Response)
 
 	public readonly remoteProcedureCall = async <
@@ -187,6 +200,20 @@ export class FetchJsonRpc implements JsonRpc {
 	}
 
 	private readonly isSignedTransaction = (transaction: IUnsignedTransaction | ISignedTransaction): transaction is ISignedTransaction => (transaction as any).r !== undefined
+
+	private readonly mutateMessageForSigning = (message: string | Uint8Array): Bytes => {
+		message = (typeof message === 'string') ? new TextEncoder().encode(message) : message
+		const messagePrefix = new TextEncoder().encode(`\x19Ethereum Signed Message:\n${message.length.toString(10)}`)
+		return Bytes.fromByteArray([...messagePrefix, ...message])
+	}
+
+	private readonly encodeSignature = (signature: SignatureLike): Bytes => {
+		const v = (signature.yParity === 'even' ? 0n : 1n) + 27n
+		const rSegment = Bytes.fromUnsignedInteger(signature.r, 256)
+		const sSegment = Bytes.fromUnsignedInteger(signature.s, 256)
+		const vSegment = Bytes.fromUnsignedInteger(v, 8)
+		return Bytes.fromByteArray([...rSegment, ...sSegment, ...vSegment])
+	}
 }
 
 type DropFirst<T extends any[]> = ((...t: T) => void) extends ((x: any, ...u: infer U) => void) ? U : never
@@ -194,3 +221,5 @@ type PickFirst<T extends any[]> = ((...t: T) => void) extends ((x: infer U, ...u
 type ResultType<T extends { result: unknown }> = T extends { result: infer R } ? R : never
 type RawRequestType<T extends { wireEncode: () => IJsonRpcRequest<JsonRpcMethod, unknown[]> }> = T extends { wireEncode: () => infer R } ? R : never
 type PartiallyRequired<T, K extends keyof T> = { [Key in Exclude<keyof T, K>]?: T[Key] } & { [Key in K]-?: T[Key] }
+// https://github.com/microsoft/TypeScript/issues/31535
+declare class TextEncoder { encode(input?: string): Uint8Array }
