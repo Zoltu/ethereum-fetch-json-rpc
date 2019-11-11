@@ -21,7 +21,7 @@
 		"typescript": "3.6.4"
 	},
 	"dependencies": {
-		"@zoltu/ethereum-types": "8.1.0"
+		"@zoltu/ethereum-types": "8.2.2"
 	},
 	"scripts": {
 		"copy-dependencies": "recursive-copy \"node_modules/@zoltu/rlp-encoder/source\" \"source/vendor/rlp-encoder\"",
