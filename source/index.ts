@@ -50,7 +50,7 @@ export class FetchJsonRpc implements JsonRpc {
 
 	public readonly offChainContractCall = async (transaction: PartiallyRequired<IOffChainTransaction, 'to'|'data'>): Promise<Bytes> => {
 		const offChainTransaction: IOffChainTransaction = {
-			from: transaction.from || await this.coinbase() || 0n,
+			from: transaction.from !== undefined ? transaction.from : await this.coinbase().catch(() => null) || 0n,
 			to: transaction.to,
 			value: transaction.value || 0n,
 			data: transaction.data || new Bytes(),
@@ -134,7 +134,7 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly sendTransaction = this.submitTransaction
 	public readonly signTransaction = async (transaction: Partial<IUnsignedTransaction> & { to: bigint | null }): Promise<Rpc.Eth.SignTransaction.Response['result']> => {
 		const gasEstimatingTransaction: IOffChainTransaction = {
-			from: transaction.from || await this.coinbase() || 0n,
+			from: transaction.from !== undefined ? transaction.from : await this.coinbase().catch(() => null) || 0n,
 			to: transaction.to,
 			value: transaction.value || 0n,
 			data: transaction.data || new Bytes(),
