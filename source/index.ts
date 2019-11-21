@@ -24,22 +24,34 @@ type SignatureLike = {
 	yParity: 'even' | 'odd',
 }
 
+export interface FetchJsonRpcOptions {
+	gasPriceInAttoethProvider?: () => Promise<bigint>
+	gasLimitProvider?: (transaction: IOffChainTransaction, estimator: (transaction: IOffChainTransaction) => Promise<bigint>) => Promise<bigint>
+	addressProvider?: () => Promise<bigint>
+	signatureProvider?: (bytes: Bytes) => Promise<SignatureLike>
+	chainId?: bigint
+}
+
 export class FetchJsonRpc implements JsonRpc {
+	public readonly gasPriceInAttoethProvider?: () => Promise<bigint>
+	public readonly gasLimitProvider: (transaction: IOffChainTransaction, estimator: (transaction: IOffChainTransaction) => Promise<bigint>) => Promise<bigint>
+	public readonly addressProvider?: () => Promise<bigint>
+	public readonly signatureProvider?: (bytes: Bytes) => Promise<SignatureLike>
 	private readonly chainId: Promise<bigint>
-	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>)
-	public constructor(jsonRpcEndpoint: string, fetch: Fetch, getGasPriceInAttoeth?: () => Promise<bigint>, getSignerAddress?: () => Promise<bigint>, signer?: (bytes: Bytes) => Promise<SignatureLike>, chainId?: bigint)
+
 	public constructor(
 		public readonly jsonRpcEndpoint: string,
 		public readonly fetch: Fetch,
-		public getGasPriceInAttoeth?: () => Promise<bigint>,
-		public getSignerAddress?: () => Promise<bigint>,
-		public readonly signer?: (bytes: Bytes) => Promise<SignatureLike>,
-		chainId?: bigint
+		options: FetchJsonRpcOptions,
 	) {
-		this.coinbase = (getSignerAddress) ? getSignerAddress : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
-		this.getAccounts = (getSignerAddress) ? async () => [await getSignerAddress()] : this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
-		this.getGasPrice = (getGasPriceInAttoeth) ? getGasPriceInAttoeth : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
-		this.chainId = (chainId !== undefined) ? Promise.resolve(chainId) : this.getChainId()
+		this.gasPriceInAttoethProvider = options.gasPriceInAttoethProvider
+		this.gasLimitProvider = options.gasLimitProvider || (async (transaction, estimator) => await estimator(transaction))
+		const getSignerAddress = this.addressProvider = options.addressProvider
+		this.signatureProvider = options.signatureProvider
+		this.chainId = (options.chainId !== undefined) ? Promise.resolve(options.chainId) : this.getChainId()
+		this.coinbase = (this.addressProvider) ? this.addressProvider : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
+		this.getAccounts = (getSignerAddress !== undefined) ? async () => [await getSignerAddress()] : this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
+		this.getGasPrice = (this.gasPriceInAttoethProvider) ? this.gasPriceInAttoethProvider : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
 	}
 
 	public readonly sendEth = async (destination: bigint, amount: bigint): Promise<TransactionReceipt> => await this.executeTransaction({ to: destination, value: amount })
@@ -143,15 +155,15 @@ export class FetchJsonRpc implements JsonRpc {
 		}
 		const unsignedTransaction = {
 			...gasEstimatingTransaction,
-			gasLimit: transaction.gasLimit || await this.estimateGas(gasEstimatingTransaction),
+			gasLimit: transaction.gasLimit || await this.gasLimitProvider(gasEstimatingTransaction, this.estimateGas),
 			nonce: transaction.nonce || await this.getTransactionCount(gasEstimatingTransaction.from, 'pending'),
 			chainId: await this.chainId,
 		}
-		if (this.signer === undefined) {
+		if (this.signatureProvider === undefined) {
 			return  await this.makeRequest(Rpc.Eth.SignTransaction.Request, Rpc.Eth.SignTransaction.Response)(unsignedTransaction)
 		} else {
 			const rlpEncodedUnsignedTransaction = this.rlpEncodeTransaction(unsignedTransaction)
-			const signature = await this.signer(rlpEncodedUnsignedTransaction)
+			const signature = await this.signatureProvider(rlpEncodedUnsignedTransaction)
 			const v = (signature.yParity === 'even' ? 0n : 1n) + 35n + 2n * unsignedTransaction.chainId
 			const decodedTransaction = {...unsignedTransaction, r: signature.r, s: signature.s, v }
 			const encodedTransaction = this.rlpEncodeTransaction(decodedTransaction)
@@ -159,10 +171,10 @@ export class FetchJsonRpc implements JsonRpc {
 		}
 	}
 	public readonly sign = async (signerAddress: bigint, data: Uint8Array) => {
-		if (this.signer === undefined) return this.makeRequest(Rpc.Eth.Sign.Request, Rpc.Eth.Sign.Response)(signerAddress, data)
+		if (this.signatureProvider === undefined) return this.makeRequest(Rpc.Eth.Sign.Request, Rpc.Eth.Sign.Response)(signerAddress, data)
 		if (await this.coinbase() !== signerAddress) throw new Error(`Cannot sign messages for address 0x${signerAddress.toString(16).padStart(40, '0')}`)
 		const messageToSign = this.mutateMessageForSigning(data)
-		const signature = await this.signer(messageToSign)
+		const signature = await this.signatureProvider(messageToSign)
 		return this.encodeSignature(signature)
 	}
 	public readonly syncing = this.makeRequest(Rpc.Eth.Syncing.Request, Rpc.Eth.Syncing.Response)
