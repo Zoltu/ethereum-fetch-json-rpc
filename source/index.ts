@@ -52,6 +52,9 @@ export class FetchJsonRpc implements JsonRpc {
 		this.coinbase = (this.addressProvider) ? this.addressProvider : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
 		this.getAccounts = (getSignerAddress !== undefined) ? async () => [await getSignerAddress()] : this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
 		this.getGasPrice = (this.gasPriceInAttoethProvider) ? this.gasPriceInAttoethProvider : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
+
+		// silence NodeJS/Chrome warnings about unhandled rejections when we pre-fetch
+		this.chainId.catch(() => {})
 	}
 
 	public readonly sendEth = async (destination: bigint, amount: bigint): Promise<TransactionReceipt> => await this.executeTransaction({ to: destination, value: amount })
