@@ -101,7 +101,7 @@ export class FetchJsonRpc implements JsonRpc {
 		TResponse extends InstanceType<TResponseConstructor>,
 		TResponseResult extends ResultType<TResponse>,
 	>(Request: TRequestConstructor, Response: TResponseConstructor) => async (...args: DropFirst<ConstructorParameters<TRequestConstructor>>): Promise<TResponseResult> => {
-		const request = new Request(null, ...args) as TRequest
+		const request = new Request(0, ...args) as TRequest
 		const rawRequest = request.wireEncode() as RawRequestType<TRequest>
 		const rawResponse = await this.remoteProcedureCall(rawRequest) as PickFirst<ConstructorParameters<TResponseConstructor>>
 		const response = new Response(rawResponse) as TResponse
