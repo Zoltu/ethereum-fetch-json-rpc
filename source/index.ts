@@ -25,10 +25,10 @@ type SignatureLike = {
 }
 
 export interface FetchJsonRpcOptions {
-	gasPriceInAttoethProvider?: () => Promise<bigint>
-	gasLimitProvider?: (transaction: IOffChainTransaction, estimator: (transaction: IOffChainTransaction) => Promise<bigint>) => Promise<bigint>
-	addressProvider?: () => Promise<bigint>
-	signatureProvider?: (bytes: Bytes) => Promise<SignatureLike>
+	gasPriceInAttoethProvider?: FetchJsonRpc['gasPriceInAttoethProvider']
+	gasLimitProvider?: FetchJsonRpc['gasLimitProvider']
+	addressProvider?: FetchJsonRpc['addressProvider']
+	signatureProvider?: FetchJsonRpc['signatureProvider']
 	chainId?: bigint
 }
 
@@ -46,10 +46,12 @@ export class FetchJsonRpc implements JsonRpc {
 	) {
 		this.gasPriceInAttoethProvider = options.gasPriceInAttoethProvider
 		this.gasLimitProvider = options.gasLimitProvider || (async (transaction, estimator) => await estimator(transaction))
-		const getSignerAddress = this.addressProvider = options.addressProvider
+		this.addressProvider = options.addressProvider
 		this.signatureProvider = options.signatureProvider
 		this.chainId = (options.chainId !== undefined) ? Promise.resolve(options.chainId) : this.getChainId()
 		this.coinbase = (this.addressProvider) ? this.addressProvider : this.makeRequest(Rpc.Eth.Coinbase.Request, Rpc.Eth.Coinbase.Response)
+		// necessary to capture value for async call, since readonly modifier doesn't take effect until after constructor
+		const getSignerAddress = this.addressProvider
 		this.getAccounts = (getSignerAddress !== undefined) ? async () => [await getSignerAddress()] : this.makeRequest(Rpc.Eth.Accounts.Request, Rpc.Eth.Accounts.Response)
 		this.getGasPrice = (this.gasPriceInAttoethProvider) ? this.gasPriceInAttoethProvider : this.makeRequest(Rpc.Eth.GasPrice.Request, Rpc.Eth.GasPrice.Response)
 
@@ -191,7 +193,7 @@ export class FetchJsonRpc implements JsonRpc {
 		if (!response.ok) throw new ErrorWithData(`${response.status}: ${response.statusText}\n${response.text()}`, request)
 		const responseBody: TRawResponse | IJsonRpcError = await response.json()
 		validateJsonRpcResponse(responseBody)
-		if (isJsonRpcError(responseBody)) throw new ErrorWithData(responseBody.error.message, request)
+		if (isJsonRpcError(responseBody)) throw new ErrorWithData(this.extractErrorMessage(responseBody.error), request)
 		return responseBody
 	}
 
@@ -231,6 +233,16 @@ export class FetchJsonRpc implements JsonRpc {
 		const vSegment = Bytes.fromUnsignedInteger(v, 8)
 		return Bytes.fromByteArray([...rSegment, ...sSegment, ...vSegment])
 	}
+
+	private readonly extractErrorMessage = (error: IJsonRpcError['error']): string => {
+		if (typeof error.data !== 'string') return error.message
+		// handle contract revert errors from Parity
+		if (!error.data.startsWith('Reverted 0x08c379a0')) return error.message
+		const offset = Number.parseInt(error.data.substr(19, 64), 16) * 2
+		const length = Number.parseInt(error.data.substr(19 + offset, 64), 16) * 2
+		const message = new TextDecoder().decode(Bytes.fromHexString(error.data.substr(19 + offset + 64, length)))
+		return `Contract Error: ${message}`
+	}
 }
 
 type DropFirst<T extends any[]> = ((...t: T) => void) extends ((x: any, ...u: infer U) => void) ? U : never
@@ -240,3 +252,4 @@ type RawRequestType<T extends { wireEncode: () => IJsonRpcRequest<JsonRpcMethod,
 type PartiallyRequired<T, K extends keyof T> = { [Key in Exclude<keyof T, K>]?: T[Key] } & { [Key in K]-?: T[Key] }
 // https://github.com/microsoft/TypeScript/issues/31535
 declare class TextEncoder { encode(input?: string): Uint8Array }
+declare class TextDecoder { decode(input?: Uint8Array): string }
