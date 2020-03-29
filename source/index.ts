@@ -193,7 +193,7 @@ export class FetchJsonRpc implements JsonRpc {
 		if (!response.ok) throw new ErrorWithData(`${response.status}: ${response.statusText}\n${response.text()}`, request)
 		const responseBody: TRawResponse | IJsonRpcError = await response.json()
 		validateJsonRpcResponse(responseBody)
-		if (isJsonRpcError(responseBody)) throw new ErrorWithData(this.extractErrorMessage(responseBody.error), request)
+		if (isJsonRpcError(responseBody)) throw new ErrorWithData(this.extractErrorMessage(responseBody.error), { request, code: responseBody.error.code, data: responseBody.error.data })
 		return responseBody
 	}
 
