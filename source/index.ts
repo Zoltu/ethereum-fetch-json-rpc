@@ -237,11 +237,18 @@ export class FetchJsonRpc implements JsonRpc {
 	private readonly extractErrorMessage = (error: IJsonRpcError['error']): string => {
 		if (typeof error.data !== 'string') return error.message
 		// handle contract revert errors from Parity
-		if (!error.data.startsWith('Reverted 0x08c379a0')) return error.message
-		const offset = Number.parseInt(error.data.substr(19, 64), 16) * 2
-		const length = Number.parseInt(error.data.substr(19 + offset, 64), 16) * 2
-		const message = new TextDecoder().decode(Bytes.fromHexString(error.data.substr(19 + offset + 64, length)))
-		return `Contract Error: ${message}`
+		if (error.data.startsWith('Reverted 0x08c379a0')) {
+			const offset = Number.parseInt(error.data.substr('Reverted 0x08c379a0'.length, 64), 16) * 2
+			const length = Number.parseInt(error.data.substr('Reverted 0x08c379a0'.length + offset, 64), 16) * 2
+			const message = new TextDecoder().decode(Bytes.fromHexString(error.data.substr(19 + offset + 64, length)))
+			return `Contract Error: ${message}`
+		}
+		// handle contract revert errors from Nethermind
+		if (error.data.startsWith('revert: ')) {
+			const message = error.data.substr('revert: '.length)
+			return `Contract Error: ${message}`
+		}
+		return error.message
 	}
 }
 
