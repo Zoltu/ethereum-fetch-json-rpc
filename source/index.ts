@@ -127,6 +127,7 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly getChainId = this.makeRequest(Rpc.Eth.ChainId.Request, Rpc.Eth.ChainId.Response)
 	public readonly getCode = this.makeRequest(Rpc.Eth.GetCode.Request, Rpc.Eth.GetCode.Response)
 	public readonly getLogs = this.makeRequest(Rpc.Eth.GetLogs.Request, Rpc.Eth.GetLogs.Response)
+	public readonly getProof = this.makeRequest(Rpc.Eth.GetProof.Request, Rpc.Eth.GetProof.Response)
 	public readonly getStorageAt = this.makeRequest(Rpc.Eth.GetStorageAt.Request, Rpc.Eth.GetStorageAt.Response)
 	public readonly getTransactionByBlockHashAndIndex = this.makeRequest(Rpc.Eth.GetTransactionByBlockHashAndIndex.Request, Rpc.Eth.GetTransactionByBlockHashAndIndex.Response)
 	public readonly getTransactionByBlockNumberAndIndex = this.makeRequest(Rpc.Eth.GetTransactionByBlockNumberAndIndex.Request, Rpc.Eth.GetTransactionByBlockNumberAndIndex.Response)
