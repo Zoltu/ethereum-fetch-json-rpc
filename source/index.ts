@@ -136,7 +136,7 @@ export class FetchJsonRpc implements JsonRpc {
 	// workaround for Parity returning partial transaction receipts before mining
 	// public readonly getTransactionReceipt = this.makeRequest(Rpc.Eth.GetTransactionReceipt.Request, Rpc.Eth.GetTransactionReceipt.Response)
 	public readonly getTransactionReceipt = async (transactionHash: bigint): Promise<TransactionReceipt | null> => {
-		const request = new Rpc.Eth.GetTransactionReceipt.Request(null, transactionHash)
+		const request = new Rpc.Eth.GetTransactionReceipt.Request(0, transactionHash)
 		const rawRequest = request.wireEncode()
 		const rawResponse = await this.remoteProcedureCall(rawRequest)
 		if (rawResponse.result === null || rawResponse.result.blockNumber === null || rawResponse.result.blockHash === null) return null
