@@ -1,5 +1,7 @@
-/node_modules/
-/output-es/
-/output-node/
+/**/node_modules/
+/output-esm/*
+/output-cjs/*
+!/output-esm/package.json
+!/output-cjs/package.json
 /source/vendor/**
 !/source/vendor/.gitkeep

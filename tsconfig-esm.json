@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"module": "es2015",
 		"moduleResolution": "node",
-		"outDir": "output-es",
+		"outDir": "output-esm",
 		"noEmit": false,
 		"declaration": true,
 		"plugins": [
