@@ -1,38 +1,39 @@
 {
 	"name": "@zoltu/ethereum-fetch-json-rpc",
 	"description": "A strongly typed Ethereum library that facilitates talking to an Ethereum JSON-RPC node via the whatwg Fetch API.",
-	"version": "13.0.1",
 	"repository": {
 		"url": "https://github.com/Zoltu/ethereum-fetch-json-rpc"
 	},
 	"license": "Unlicense",
-	"main": "output-node/index.js",
-	"module": "output-es/index.js",
+	"main": "./output-cjs/index.js",
+	"exports": {
+		"import": "./output-esm/index.js",
+		"require": "./output-cjs/index.js"
+	},
 	"devDependencies": {
-		"@types/chai": "4.2.3",
+		"@types/chai": "4.2.15",
 		"@zoltu/file-copier": "2.2.1",
-		"@zoltu/rlp-encoder": "1.0.2",
+		"@zoltu/rlp-encoder": "2.0.3",
 		"@zoltu/typescript-transformer-append-js-extension": "1.0.1",
-		"chai": "4.2.0",
+		"chai": "4.3.4",
 		"chai-bytes": "0.1.2",
-		"recursive-fs": "1.1.2",
-		"ts-node": "8.6.2",
-		"ttypescript": "1.5.10",
-		"typescript": "3.8.2"
+		"recursive-fs": "2.1.0",
+		"ts-node": "9.1.1",
+		"ttypescript": "1.5.12",
+		"typescript": "4.2.3"
 	},
 	"dependencies": {
-		"@zoltu/ethereum-types": "9.0.0"
+		"@zoltu/ethereum-types": "9.0.3"
 	},
 	"scripts": {
 		"copy-dependencies": "recursive-copy \"node_modules/@zoltu/rlp-encoder/source\" \"source/vendor/rlp-encoder\"",
 		"prepare": "npm run copy-dependencies",
-		"build": "ttsc --project tsconfig-es.json && tsc --project tsconfig-node.json",
-		"test": "ts-node --project tsconfig-tests.json source/index.tests.ts",
-		"prepublishOnly": "npm run build && npm run test"
+		"build": "ttsc --project tsconfig-esm.json && tsc --project tsconfig-cjs.json",
+		"test": "ts-node --project tsconfig-tests.json source/index.tests.ts"
 	},
 	"files": [
-		"/output-es/",
-		"/output-node/",
+		"/output-esm/",
+		"/output-cjs/",
 		"/source/",
 		"README.md",
 		"LICENSE"

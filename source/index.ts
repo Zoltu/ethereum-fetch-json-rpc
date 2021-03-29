@@ -151,7 +151,7 @@ export class FetchJsonRpc implements JsonRpc {
 	public readonly sendRawTransaction = this.makeRequest(Rpc.Eth.SendRawTransaction.Request, Rpc.Eth.SendRawTransaction.Response)
 	public readonly sendTransaction = this.submitTransaction
 	public readonly signTransaction = async (transaction: Partial<IUnsignedTransaction> & { to: bigint | null }): Promise<Rpc.Eth.SignTransaction.Response['result']> => {
-		const gasEstimatingTransaction: IOffChainTransaction = {
+		const gasEstimatingTransaction = {
 			from: transaction.from !== undefined ? transaction.from : await this.coinbase().catch(() => null) || 0n,
 			to: transaction.to,
 			value: transaction.value || 0n,
