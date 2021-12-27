@@ -23,7 +23,7 @@
 		"typescript": "4.2.3"
 	},
 	"dependencies": {
-		"@zoltu/ethereum-types": "9.0.3"
+		"@zoltu/ethereum-types": "9.0.4"
 	},
 	"scripts": {
 		"copy-dependencies": "recursive-copy \"node_modules/@zoltu/rlp-encoder/source\" \"source/vendor/rlp-encoder\"",
