@@ -203,7 +203,7 @@ export class FetchJsonRpc implements JsonRpc {
 			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.nonce, 256)),
 			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.gasPrice, 256)),
 			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.gasLimit, 256)),
-			transaction.to !== null ? Bytes.fromUnsignedInteger(transaction.to, 256) : new Uint8Array(0),
+			transaction.to !== null ? Bytes.fromUnsignedInteger(transaction.to, 160) : new Uint8Array(0),
 			stripLeadingZeros(Bytes.fromUnsignedInteger(transaction.value, 256)),
 			new Uint8Array(transaction.data),
 		]
